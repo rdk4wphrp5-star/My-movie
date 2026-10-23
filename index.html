@@ -4,35 +4,54 @@
     <meta charset="UTF-8">
     <title>سينيما ديسكورد الخاصة 🎬</title>
     <style>
-        body { background: #111; color: white; text-align: center; font-family: sans-serif; padding-top: 20px; }
-        #player { border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: inline-block; }
-        p { color: #aaa; font-size: 14px; }
+        body { background: #111; color: white; text-align: center; font-family: sans-serif; padding: 15px; margin: 0; }
+        h1 { font-size: 20px; margin-bottom: 5px; }
+        p { color: #aaa; font-size: 12px; margin-bottom: 15px; }
+        
+        /* حاوية الفيديو لضمان ظهوره بشكل صحيح على الموبايل */
+        #player-container {
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 16 / 9;
+            margin: 0 auto;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+        }
+        #player {
+            width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
 <body>
     <h1>قاعة الأفلام الخاصة بي 🍿</h1>
-    <p>جاري الاتصال بقاعة ديسكورد...</p>
+    <p>متزامن مع الجميع في الغرفة!</p>
     
-    <!-- مكان مشغل يوتيوب -->
-    <div id="player"></div>
+    <!-- حاوية مشغل الفيديو -->
+    <div id="player-container">
+        <div id="player"></div>
+    </div>
 
-    <!-- استدعاء مكتبات ديسكورد، يوتيوب، و فايربيس -->
+    <!-- المكتبات -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script type="module">
         import { DiscordSDK } from "https://cdn.jsdelivr.net/npm/@discord/embedded-app-sdk@1.0.0/+esm";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
         import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
-        // 1. تفعيل ديسكورد SDK بالـ Client ID الخاص بك
         const discordSdk = new DiscordSDK('1563244164106293421');
 
         async function initDiscord() {
-            await discordSdk.ready();
-            console.log("Discord SDK Ready!");
+            try {
+                await discordSdk.ready();
+                console.log("Discord SDK Ready!");
+            } catch (e) {
+                console.log("Not inside Discord");
+            }
         }
         initDiscord();
 
-        // 2. إعدادات فايربيس للمزامنة
         const firebaseConfig = {
             apiKey: "AIzaSyAkpD64rIo7YPMLfHHy_ILjveWh8ZAfFYY",
             authDomain: "discord-movie-3dabc.firebaseapp.com",
@@ -49,13 +68,12 @@
         let player;
         let isRemoteUpdate = false;
 
-        // 3. تشغيل يوتيوب
         window.onYouTubeIframeAPIReady = function() {
             player = new YT.Player('player', {
-                height: '360',
-                width: '640',
-                videoId: 'Aab-jcNrYbU', // فيديو الفيلم بتاعك
-                playerVars: { 'playsinline': 1 },
+                width: '100%',
+                height: '100%',
+                videoId: 'Aab-jcNrYbU',
+                playerVars: { 'playsinline': 1, 'enablejsapi': 1 },
                 events: {
                     'onStateChange': onPlayerStateChange
                 }
@@ -64,12 +82,14 @@
 
         function onPlayerStateChange(event) {
             if (isRemoteUpdate) return;
-            const currentTime = player.getCurrentTime();
-            if (event.data == YT.PlayerState.PLAYING) {
-                set(ref(db, "room/state"), { playing: true, time: currentTime });
-            } else if (event.data == YT.PlayerState.PAUSED) {
-                set(ref(db, "room/state"), { playing: false, time: currentTime });
-            }
+            try {
+                const currentTime = player.getCurrentTime();
+                if (event.data == YT.PlayerState.PLAYING) {
+                    set(ref(db, "room/state"), { playing: true, time: currentTime });
+                } else if (event.data == YT.PlayerState.PAUSED) {
+                    set(ref(db, "room/state"), { playing: false, time: currentTime });
+                }
+            } catch (e) {}
         }
 
         onValue(ref(db, "room/state"), (snapshot) => {
@@ -77,16 +97,18 @@
             if (!data || !player || typeof player.getPlayerState !== 'function') return;
 
             isRemoteUpdate = true;
-            const currentTime = player.getCurrentTime();
-            if (Math.abs(currentTime - data.time) > 2) {
-                player.seekTo(data.time, true);
-            }
+            try {
+                const currentTime = player.getCurrentTime();
+                if (Math.abs(currentTime - data.time) > 2) {
+                    player.seekTo(data.time, true);
+                }
 
-            if (data.playing && player.getPlayerState() !== YT.PlayerState.PLAYING) {
-                player.playVideo();
-            } else if (!data.playing && player.getPlayerState() !== YT.PlayerState.PAUSED) {
-                player.pauseVideo();
-            }
+                if (data.playing && player.getPlayerState() !== YT.PlayerState.PLAYING) {
+                    player.playVideo();
+                } else if (!data.playing && player.getPlayerState() !== YT.PlayerState.PAUSED) {
+                    player.pauseVideo();
+                }
+            } catch (e) {}
 
             setTimeout(() => { isRemoteUpdate = false; }, 600);
         });
