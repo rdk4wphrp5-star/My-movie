@@ -55,7 +55,6 @@
             font-size: 12px;
             margin-top: 10px;
             text-align: center;
-            max-width: 90%;
         }
     </style>
 </head>
@@ -64,8 +63,8 @@
     <div class="video-box">
         <button id="customPlayBtn" onclick="playVideo()">تشغيل الفيلم 🎬</button>
         
-        <!-- تم وضع الرابط مباشرة مع تفعيل crossorigin لتجاوز قيود متصفح ديسكورد على الآيفون -->
-        <video id="moviePlayer" src="https://pub-f5cff3f81d2545699fe2aea565870e82.r2.dev/Movies/sample-5s.mp4" crossorigin="anonymous" playsinline webkit-playsinline preload="auto">
+        <!-- تشغيل الفيديو محلياً من نفس السيرفر بدون روابط خارجية -->
+        <video id="moviePlayer" src="sample-5s.mp4" playsinline webkit-playsinline preload="auto">
             متصفحك لا يدعم عرض الفيديو.
         </video>
     </div>
@@ -93,16 +92,7 @@
 
         video.onerror = function() {
             const err = video.error;
-            let msg = "خطأ غير معروف";
-            if (err) {
-                switch (err.code) {
-                    case 1: msg = "تم إلغاء التحميل"; break;
-                    case 2: msg = "خطأ شبكة (Network Error) - تأكد من إعدادات CORS في R2"; break;
-                    case 3: msg = "خطأ في فك التشفير"; break;
-                    case 4: msg = "الصيغة غير مدعومة أو رابط R2 محظور"; break;
-                }
-            }
-            errorLog.innerText = "كود الخطأ: " + msg;
+            errorLog.innerText = "خطأ في تحميل الملف المحلي (كود: " + (err ? err.code : "غير معروف") + ")";
         };
 
         const discordSdk = new DiscordSDK('1563244164106293421');
@@ -149,8 +139,10 @@
         };
 
         video.onpause = () => {
-            if (isRemoteUpdate) return;
-            set(ref(db, "room/state"), { playing: false, time: video.currentTime });
+            if (isRemoteUpdate, true) {
+                if (isRemoteUpdate) return;
+                set(ref(db, "room/state"), { playing: false, time: video.currentTime });
+            }
         };
     </script>
 </body>
