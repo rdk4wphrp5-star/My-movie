@@ -3,72 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سينيما ديسكورد الاحترافية 🎬</title>
+    <title>سينيما ديسكورد الخاصة 🎬</title>
     <style>
-        * { box-sizing: border-box; }
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            background-color: #0d0d0d;
+            background-color: #0b0b0b;
             color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: sans-serif;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             overflow: hidden;
         }
-        h1 {
-            font-size: 18px;
-            margin-bottom: 10px;
-            color: #f1f1f1;
-        }
-        /* حاوية الفيديو لتملأ شاشة الأكتيفتي باحترافية زي الصورة */
-        #video-container {
-            width: 90%;
-            max-width: 900px;
-            aspect-ratio: 16 / 9;
+        h1 { font-size: 16px; margin-bottom: 5px; }
+        p { color: #aaa; font-size: 11px; margin-bottom: 10px; }
+        
+        .video-box {
+            width: 95%;
+            max-width: 800px;
+            aspect-ratio: 16/9;
             background: #000;
-            border-radius: 12px;
+            border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
         }
-        iframe {
+        video {
             width: 100%;
             height: 100%;
-            border: none;
+            object-fit: contain;
         }
     </style>
 </head>
 <body>
 
-    <h1>قاعة الأفلام المشتركة 🍿</h1>
+    <h1>قاعة الأفلام الخاصة 🍿</h1>
+    <p>مرفوع على سيرفرك الخاص ومتزامن مع الأصدقاء</p>
 
-    <!-- مشغل الفيديو المتوافق مع ديسكورد -->
-    <div id="video-container">
-        <iframe src="https://www.youtube.com/embed/Aab-jcNrYbU?autoplay=1&enablejsapi=1&playsinline=1" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowfullscreen>
-        </iframe>
+    <!-- مشغل الفيديو المباشر من Cloudflare R2 -->
+    <div class="video-box">
+        <video id="moviePlayer" controls playsinline webkit-playsinline preload="auto">
+            <source src="https://pub-f5cff3f81d2545699fe2aea565870e82.r2.dev/Movies/sample-5s.mp4" type="video/mp4">
+            متصفحك لا يدعم عرض الفيديو.
+        </video>
     </div>
 
-    <!-- تفعيل ديسكورد SDK لتظهر الأكتيفتي بشكل نظامي -->
+    <!-- ديسكورد SDK وفايربيس للمزامنة -->
     <script type="module">
         import { DiscordSDK } from "https://cdn.jsdelivr.net/npm/@discord/embedded-app-sdk@1.0.0/+esm";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
+        // تفعيل ديسكورد SDK
         const discordSdk = new DiscordSDK('1563244164106293421');
+        discordSdk.ready().catch(() => {});
 
-        async function setup() {
-            try {
-                await discordSdk.ready();
-                console.log("Discord SDK Initialized successfully!");
-            } catch (error) {
-                console.error("SDK initialization error:", error);
+        // إعدادات فايربيس للمزامنة
+        const firebaseConfig = {
+            apiKey: "AIzaSyAkpD64rIo7YPMLfHHy_ILjveWh8ZAfFYY",
+            authDomain: "discord-movie-3dabc.firebaseapp.com",
+            projectId: "discord-movie-3dabc",
+            storageBucket: "discord-movie-3dabc.firebasestorage.app",
+            messagingSenderId: "548090739512",
+            appId: "1:548090739512:web:e796bf7ddd946dc57f5fcd",
+            measurementId: "G-YG7EGNY17Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const video = document.getElementById("moviePlayer");
+
+        let isRemoteUpdate = false;
+
+        // استقبال التحديثات من الغرفة (المزامنة)
+        onValue(ref(db, "room/state"), (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            isRemoteUpdate = true;
+            if (Math.abs(video.currentTime - data.time) > 1.5) {
+                video.currentTime = data.time;
             }
-        }
-        setup();
+
+            if (data.playing && video.paused) {
+                video.play().catch(() => {});
+            } else if (!data.playing && !video.paused) {
+                video.pause();
+            }
+
+            setTimeout(() => { isRemoteUpdate = false; }, 500);
+        });
+
+        // إرسال حالتك لفايربيس عند التشغيل أو الإيقاف
+        video.onplay = () => {
+            if (isRemoteUpdate) return;
+            set(ref(db, "room/state"), { playing: true, time: video.currentTime });
+        };
+
+        video.onpause = () => {
+            if (isRemoteUpdate) return;
+            set(ref(db, "room/state"), { playing: false, time: video.currentTime });
+        };
     </script>
 </body>
 </html>
