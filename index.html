@@ -20,6 +20,7 @@
             overflow: hidden;
         }
         .video-box {
+            position: relative;
             width: 95%;
             max-width: 800px;
             aspect-ratio: 16/9;
@@ -33,6 +34,23 @@
             height: 100%;
             object-fit: contain;
         }
+        /* زر التشغيل المخصص للآيفون والموبايل */
+        #customPlayBtn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.85);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
         #error-log {
             color: #ff5555;
             font-size: 12px;
@@ -44,7 +62,10 @@
 <body>
 
     <div class="video-box">
-        <video id="moviePlayer" controls playsinline webkit-playsinline preload="auto">
+        <!-- زر تشغيل مخصص يظهر فوق الفيديو ليحل مشكلة عدم الاستجابة على الآيفون -->
+        <button id="customPlayBtn" onclick="playVideo()">تشغيل الفيلم 🎬</button>
+        
+        <video id="moviePlayer" playsinline webkit-playsinline preload="auto">
             <source src="https://pub-f5cff3f81d2545699fe2aea565870e82.r2.dev/Movies/sample-5s.mp4" type="video/mp4">
             متصفحك لا يدعم عرض الفيديو.
         </video>
@@ -59,19 +80,27 @@
         import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
         const video = document.getElementById("moviePlayer");
+        const playBtn = document.getElementById("customPlayBtn");
         const errorLog = document.getElementById("error-log");
 
-        // تسجيل أي خطأ في تحميل الفيديو
+        // دالة التشغيل عند الضغط على الزر المخصص
+        window.playVideo = function() {
+            video.play().then(() => {
+                playBtn.style.display = "none"; // إخفاء الزر بعد التشغيل
+                video.controls = true; // إظهار أزرار التحكم الطبيعية بعد ما يشتغل
+            }).catch((err) => {
+                errorLog.innerText = "خطأ في التشغيل: " + err.message;
+            });
+        };
+
         video.onerror = function() {
             const err = video.error;
-            errorLog.innerText = "خطأ في الفيديو (كود: " + (err ? err.code : "غير معروف") + ")";
+            errorLog.innerText = "خطأ في تحميل الفيديو (كود: " + (err ? err.code : "غير معروف") + ")";
         };
 
         // تفعيل ديسكورد SDK
         const discordSdk = new DiscordSDK('1563244164106293421');
-        discordSdk.ready().catch((e) => {
-            console.log("Discord SDK Error: ", e);
-        });
+        discordSdk.ready().catch(() => {});
 
         // إعدادات فايربيس للمزامنة
         const firebaseConfig = {
@@ -99,7 +128,7 @@
             }
 
             if (data.playing && video.paused) {
-                video.play().catch(() => {});
+                video.play().then(() => { playBtn.style.display = "none"; video.controls = true; }).catch(() => {});
             } else if (!data.playing && !video.paused) {
                 video.pause();
             }
@@ -108,6 +137,8 @@
         });
 
         video.onplay = () => {
+            playBtn.style.display = "none";
+            video.controls = true;
             if (isRemoteUpdate) return;
             set(ref(db, "room/state"), { playing: true, time: video.currentTime });
         };
