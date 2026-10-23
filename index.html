@@ -2,29 +2,26 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>سينيما ديسكورد المتزامنة 🎬</title>
+    <title>سينيما ديسكورد المتزامنة (يوتيوب) 🎬</title>
     <style>
-        body { background: #111; color: white; text-align: center; font-family: sans-serif; padding-top: 30px; }
-        video { width: 90%; max-width: 800px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        body { background: #111; color: white; text-align: center; font-family: sans-serif; padding-top: 20px; }
+        #player { border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: inline-block; }
         p { color: #aaa; font-size: 14px; }
     </style>
 </head>
 <body>
     <h1>قاعة الأفلام المشتركة 🍿</h1>
-    <p>التشغيل والإيقاف متزامن مع كل الموجودين في الغرفة!</p>
+    <p>التشغيل والإيقاف والمقدمات متزامنة تماماً!</p>
     
-    <!-- مشغل الفيديو مع رابط الفيلم المباشر -->
-    <video id="moviePlayer" controls>
-        <source src="https://lh3.googleusercontent.com/d/1pmPxQ8z7JA-286UOXEsIRowqMHpal6CZ" type="video/mp4">
-        متصفحك لا يدعم عرض الفيديو.
-    </video>
+    <!-- مكان مشغل يوتيوب -->
+    <div id="player"></div>
 
-    <!-- كود فايربيس والمزامنة الحديث -->
+    <!-- استدعاء يوتيوب آي بي آي وفايربيس -->
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
         import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
-        // إعدادات فايربيس الخاصة بك
         const firebaseConfig = {
             apiKey: "AIzaSyAkpD64rIo7YPMLfHHy_ILjveWh8ZAfFYY",
             authDomain: "discord-movie-3dabc.firebaseapp.com",
@@ -35,50 +32,57 @@
             measurementId: "G-YG7EGNY17Z"
         };
 
-        // تهيئة فايربيس وقاعدة البيانات
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const video = document.getElementById("moviePlayer");
 
-        let isUpdatingFromRemote = false;
+        let player;
+        let isRemoteUpdate = false;
 
-        // استقبال التحديثات من قاعدة البيانات (لو حد تاني وقف أو شغل الفيديو)
+        // تحميل مشغل يوتيوب بالفيديو بتاعك
+        window.onYouTubeIframeAPIReady = function() {
+            player = new YT.Player('player', {
+                height: '360',
+                width: '640',
+                videoId: 'Aab-jcNrYbU', // معرف فيديو يوتيوب بتاعك
+                playerVars: { 'playsinline': 1 },
+                events: {
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        };
+
+        // مراقبة التشغيل والإيقاف وإرسالها لفايربيس
+        function onPlayerStateChange(event) {
+            if (isRemoteUpdate) return;
+
+            const currentTime = player.getCurrentTime();
+            if (event.data == YT.PlayerState.PLAYING) {
+                set(ref(db, "room/state"), { playing: true, time: currentTime });
+            } else if (event.data == YT.PlayerState.PAUSED) {
+                set(ref(db, "room/state"), { playing: false, time: currentTime });
+            }
+        }
+
+        // استقبال التحديثات من الأصدقاء في الغرفة
         onValue(ref(db, "room/state"), (snapshot) => {
             const data = snapshot.val();
-            if (!data) return;
+            if (!data || !player || typeof player.getPlayerState !== 'function') return;
 
-            isUpdatingFromRemote = true;
+            isRemoteUpdate = true;
 
-            // ضبط الوقت لو فيه فرق بينك وبين الشخص التاني
-            if (Math.abs(video.currentTime - data.time) > 1.5) {
-                video.currentTime = data.time;
+            const currentTime = player.getCurrentTime();
+            if (Math.abs(currentTime - data.time) > 2) {
+                player.seekTo(data.time, true);
             }
 
-            if (data.playing && video.paused) {
-                video.play();
-            } else if (!data.playing && !video.paused) {
-                video.pause();
+            if (data.playing && player.getPlayerState() !== YT.PlayerState.PLAYING) {
+                player.playVideo();
+            } else if (!data.playing && player.getPlayerState() !== YT.PlayerState.PAUSED) {
+                player.pauseVideo();
             }
 
-            setTimeout(() => { isUpdatingFromRemote = false; }, 500);
+            setTimeout(() => { isRemoteUpdate = false; }, 600);
         });
-
-        // إرسال حالة التشغيل لقاعدة البيانات لما أنت تتحكم في الفيديو
-        video.onplay = () => {
-            if (isUpdatingFromRemote) return;
-            set(ref(db, "room/state"), {
-                playing: true,
-                time: video.currentTime
-            });
-        };
-
-        video.onpause = () => {
-            if (isUpdatingFromRemote) return;
-            set(ref(db, "room/state"), {
-                playing: false,
-                time: video.currentTime
-            });
-        };
     </script>
 </body>
 </html>
