@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>سينيما ديسكورد المتزامنة (يوتيوب) 🎬</title>
+    <title>سينيما ديسكورد الخاصة 🎬</title>
     <style>
         body { background: #111; color: white; text-align: center; font-family: sans-serif; padding-top: 20px; }
         #player { border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: inline-block; }
@@ -10,18 +10,29 @@
     </style>
 </head>
 <body>
-    <h1>قاعة الأفلام المشتركة 🍿</h1>
-    <p>التشغيل والإيقاف والمقدمات متزامنة تماماً!</p>
+    <h1>قاعة الأفلام الخاصة بي 🍿</h1>
+    <p>جاري الاتصال بقاعة ديسكورد...</p>
     
     <!-- مكان مشغل يوتيوب -->
     <div id="player"></div>
 
-    <!-- استدعاء يوتيوب آي بي آي وفايربيس -->
+    <!-- استدعاء مكتبات ديسكورد، يوتيوب، و فايربيس -->
     <script src="https://www.youtube.com/iframe_api"></script>
     <script type="module">
+        import { DiscordSDK } from "https://cdn.jsdelivr.net/npm/@discord/embedded-app-sdk@1.0.0/+esm";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
         import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
+        // 1. تفعيل ديسكورد SDK بالـ Client ID الخاص بك
+        const discordSdk = new DiscordSDK('1563244164106293421');
+
+        async function initDiscord() {
+            await discordSdk.ready();
+            console.log("Discord SDK Ready!");
+        }
+        initDiscord();
+
+        // 2. إعدادات فايربيس للمزامنة
         const firebaseConfig = {
             apiKey: "AIzaSyAkpD64rIo7YPMLfHHy_ILjveWh8ZAfFYY",
             authDomain: "discord-movie-3dabc.firebaseapp.com",
@@ -38,12 +49,12 @@
         let player;
         let isRemoteUpdate = false;
 
-        // تحميل مشغل يوتيوب بالفيديو بتاعك
+        // 3. تشغيل يوتيوب
         window.onYouTubeIframeAPIReady = function() {
             player = new YT.Player('player', {
                 height: '360',
                 width: '640',
-                videoId: 'Aab-jcNrYbU', // معرف فيديو يوتيوب بتاعك
+                videoId: 'Aab-jcNrYbU', // فيديو الفيلم بتاعك
                 playerVars: { 'playsinline': 1 },
                 events: {
                     'onStateChange': onPlayerStateChange
@@ -51,10 +62,8 @@
             });
         };
 
-        // مراقبة التشغيل والإيقاف وإرسالها لفايربيس
         function onPlayerStateChange(event) {
             if (isRemoteUpdate) return;
-
             const currentTime = player.getCurrentTime();
             if (event.data == YT.PlayerState.PLAYING) {
                 set(ref(db, "room/state"), { playing: true, time: currentTime });
@@ -63,13 +72,11 @@
             }
         }
 
-        // استقبال التحديثات من الأصدقاء في الغرفة
         onValue(ref(db, "room/state"), (snapshot) => {
             const data = snapshot.val();
             if (!data || !player || typeof player.getPlayerState !== 'function') return;
 
             isRemoteUpdate = true;
-
             const currentTime = player.getCurrentTime();
             if (Math.abs(currentTime - data.time) > 2) {
                 player.seekTo(data.time, true);
