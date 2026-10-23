@@ -7,8 +7,7 @@
     <style>
         :root {
             --bg-color: #0f1015;
-            --card-bg: #181920;
-            --accent-color: #5865F2; /* لون ديسكورد الشهير */
+            --accent-color: #5865F2;
             --accent-hover: #4752C4;
             --text-main: #ffffff;
             --text-muted: #b9bbbe;
@@ -151,7 +150,9 @@
                 </div>
             </div>
 
-            <video id="moviePlayer" src="sample-5s.mp4" playsinline webkit-playsinline preload="auto" crossorigin="anonymous">
+            <!-- استخدام عنصر source لتحديد نوع الفيديو بدقة للآيفون وسفاري -->
+            <video id="moviePlayer" playsinline webkit-playsinline preload="auto" crossorigin="anonymous">
+                <source src="https://my-movie-a70.pages.dev/sample-5s.mp4" type="video/mp4">
                 متصفحك لا يدعم عرض الفيديو.
             </video>
         </div>
@@ -169,11 +170,9 @@
         const errorBox = document.getElementById("error-box");
         const syncStatus = document.getElementById("syncStatus");
 
-        // تهيئة ديسكورد SDK
         const discordSdk = new DiscordSDK('1563244164106293421');
         discordSdk.ready().catch(() => {});
 
-        // إعدادات فايربيس
         const firebaseConfig = {
             apiKey: "AIzaSyAkpD64rIo7YPMLfHHy_ILjveWh8ZAfFYY",
             authDomain: "discord-movie-3dabc.firebaseapp.com",
@@ -196,4 +195,51 @@
                 setTimeout(() => playOverlay.style.display = 'none', 300);
                 video.controls = true;
             }).catch((err) => {
-                errorBox.innerText = "تعذر التش
+                errorBox.innerText = "تعذر التشغيل: " + err.message;
+            });
+        };
+
+        video.onerror = function() {
+            const err = video.error;
+            errorBox.innerText = "خطأ في تحميل ملف الفيديو (كود: " + (err ? err.code : "غير معروف") + ")";
+        };
+
+        onValue(ref(db, "room/state"), (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            isRemoteUpdate = true;
+            
+            if (Math.abs(video.currentTime - data.time) > 1.5) {
+                video.currentTime = data.time;
+            }
+
+            if (data.playing && video.paused) {
+                video.load();
+                video.play().then(() => {
+                    playOverlay.style.display = 'none';
+                    video.controls = true;
+                }).catch(() => {});
+            } else if (!data.playing && !video.paused) {
+                video.pause();
+            }
+
+            setTimeout(() => { isRemoteUpdate = false; }, 400);
+        });
+
+        video.onplay = () => {
+            playOverlay.style.display = 'none';
+            video.controls = true;
+            syncStatus.innerText = "متصل - يتم التشغيل";
+            if (isRemoteUpdate) return;
+            set(ref(db, "room/state"), { playing: true, time: video.currentTime });
+        };
+
+        video.onpause = () => {
+            syncStatus.innerText = "متصل - متوقف مؤقتاً";
+            if (isRemoteUpdate) return;
+            set(ref(db, "room/state"), { playing: false, time: video.currentTime });
+        };
+    </script>
+</body>
+</html>
