@@ -2,17 +2,84 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>سينيما ديسكورد</title>
+    <title>سينيما ديسكورد المتزامنة 🎬</title>
     <style>
-        body { background: #111; color: white; text-align: center; font-family: sans-serif; padding-top: 50px; }
-        video { width: 90%; max-width: 800px; border-radius: 10px; }
+        body { background: #111; color: white; text-align: center; font-family: sans-serif; padding-top: 30px; }
+        video { width: 90%; max-width: 800px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        p { color: #aaa; font-size: 14px; }
     </style>
 </head>
 <body>
-    <h1>قاعة الأفلام الخاصة بينا 🎬</h1>
-    <video controls>
-        <source src="حط_رابط_الفيلم_هنا" type="video/mp4">
+    <h1>قاعة الأفلام المشتركة 🍿</h1>
+    <p>التشغيل والإيقاف متزامن مع كل الموجودين في الغرفة!</p>
+    
+    <!-- مشغل الفيديو -->
+    <video id="moviePlayer" controls>
+        <source src="حط_رابط_الفيلم_المباشر_هنا.mp4" type="video/mp4">
         متصفحك لا يدعم عرض الفيديو.
     </video>
+
+    <!-- كود فايربيس والمزامنة الحديث -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+
+        // إعدادات فايربيس الخاصة بك
+        const firebaseConfig = {
+            apiKey: "AIzaSyAkpD64rIo7YPMLfHHy_ILjveWh8ZAfFYY",
+            authDomain: "discord-movie-3dabc.firebaseapp.com",
+            projectId: "discord-movie-3dabc",
+            storageBucket: "discord-movie-3dabc.firebasestorage.app",
+            messagingSenderId: "548090739512",
+            appId: "1:548090739512:web:e796bf7ddd946dc57f5fcd",
+            measurementId: "G-YG7EGNY17Z"
+        };
+
+        // تهيئة فايربيس وقاعدة البيانات
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const video = document.getElementById("moviePlayer");
+
+        let isUpdatingFromRemote = false;
+
+        // استقبال التحديثات من قاعدة البيانات (لو حد تاني وقف أو شغل الفيديو)
+        onValue(ref(db, "room/state"), (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            isUpdatingFromRemote = true;
+
+            // ضبط الوقت لو فيه فرق بينك وبين الشخص التاني
+            if (Math.abs(video.currentTime - data.time) > 1.5) {
+                video.currentTime = data.time;
+            }
+
+            if (data.playing && video.paused) {
+                video.play();
+            } else if (!data.playing && !video.paused) {
+                video.pause();
+            }
+
+            setTimeout(() => { isUpdatingFromRemote = false; }, 500);
+        });
+
+        // إرسال حالة التشغيل لقاعدة البيانات لما أنت تتحكم في الفيديو
+        video.onplay = () => {
+            if (isUpdatingFromRemote) return;
+            set(ref(db, "room/state"), {
+                playing: true,
+                time: video.currentTime
+            });
+        };
+
+        video.onpause = () => {
+            if (isUpdatingFromRemote) return;
+            set(ref(db, "room/state"), {
+                playing: false,
+                time: video.currentTime
+            });
+        };
+    </script>
 </body>
 </html>
+
