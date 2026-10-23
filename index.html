@@ -3,101 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سينيما ديسكورد الخاصة 🎬</title>
+    <title>سينما ديسكورد التفاعلية 🎬</title>
     <style>
-        body, html {
+        :root {
+            --bg-color: #0f1015;
+            --card-bg: #181920;
+            --accent-color: #5865F2; /* لون ديسكورد الشهير */
+            --accent-hover: #4752C4;
+            --text-main: #ffffff;
+            --text-muted: #b9bbbe;
+            --danger: #ed4245;
+        }
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
+        }
+        body, html {
             width: 100%;
             height: 100%;
-            background-color: #0b0b0b;
-            color: #fff;
-            font-family: sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
             overflow: hidden;
         }
-        .video-box {
+        .app-container {
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+        .header p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .video-wrapper {
             position: relative;
-            width: 95%;
-            max-width: 800px;
+            width: 100%;
             aspect-ratio: 16/9;
             background: #000;
-            border-radius: 10px;
+            border-radius: 14px;
             overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
         video {
             width: 100%;
             height: 100%;
             object-fit: contain;
+            display: block;
         }
-        #customPlayBtn {
+        .play-overlay {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255, 0, 0, 0.85);
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+        .play-btn {
+            background: var(--accent-color);
             color: white;
             border: none;
-            padding: 15px 30px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 8px;
+            padding: 14px 32px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 30px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            z-index: 10;
+            box-shadow: 0 4px 15px rgba(88, 101, 242, 0.4);
+            transition: transform 0.2s, background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        #error-log {
-            color: #ff5555;
-            font-size: 12px;
-            margin-top: 10px;
+        .play-btn:hover {
+            background: var(--accent-hover);
+            transform: scale(1.05);
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.06);
+            padding: 6px 14px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #3ba55d;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #3ba55d;
+        }
+        #error-box {
+            color: var(--danger);
+            font-size: 0.8rem;
             text-align: center;
+            min-height: 20px;
         }
     </style>
 </head>
 <body>
 
-    <div class="video-box">
-        <button id="customPlayBtn" onclick="playVideo()">تشغيل الفيلم 🎬</button>
-        
-        <!-- تشغيل الفيديو محلياً من نفس السيرفر بدون روابط خارجية -->
-        <video id="moviePlayer" src="sample-5s.mp4" playsinline webkit-playsinline preload="auto">
-            متصفحك لا يدعم عرض الفيديو.
-        </video>
-    </div>
-    
-    <div id="error-log"></div>
+    <div class="app-container">
+        <div class="header">
+            <h1>🎬 سينما ديسكورد</h1>
+            <p>مزامنة فورية ومشاهدة جماعية سلسة</p>
+        </div>
 
-    <!-- ديسكورد SDK وفايربيس للمزامنة -->
+        <div class="video-wrapper">
+            <div id="playOverlay" class="play-overlay">
+                <button class="play-btn" onclick="initPlayback()">
+                    <span>تشغيل الفيلم</span>
+                    <span>▶</span>
+                </button>
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    <span id="syncStatus">متصل وجاهز للمزامنة</span>
+                </div>
+            </div>
+
+            <video id="moviePlayer" src="sample-5s.mp4" playsinline webkit-playsinline preload="auto" crossorigin="anonymous">
+                متصفحك لا يدعم عرض الفيديو.
+            </video>
+        </div>
+
+        <div id="error-box"></div>
+    </div>
+
     <script type="module">
         import { DiscordSDK } from "https://cdn.jsdelivr.net/npm/@discord/embedded-app-sdk@1.0.0/+esm";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
         import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
         const video = document.getElementById("moviePlayer");
-        const playBtn = document.getElementById("customPlayBtn");
-        const errorLog = document.getElementById("error-log");
+        const playOverlay = document.getElementById("playOverlay");
+        const errorBox = document.getElementById("error-box");
+        const syncStatus = document.getElementById("syncStatus");
 
-        window.playVideo = function() {
-            video.play().then(() => {
-                playBtn.style.display = "none";
-                video.controls = true;
-            }).catch((err) => {
-                errorLog.innerText = "خطأ في التشغيل: " + err.message;
-            });
-        };
-
-        video.onerror = function() {
-            const err = video.error;
-            errorLog.innerText = "خطأ في تحميل الملف المحلي (كود: " + (err ? err.code : "غير معروف") + ")";
-        };
-
+        // تهيئة ديسكورد SDK
         const discordSdk = new DiscordSDK('1563244164106293421');
         discordSdk.ready().catch(() => {});
 
+        // إعدادات فايربيس
         const firebaseConfig = {
             apiKey: "AIzaSyAkpD64rIo7YPMLfHHy_ILjveWh8ZAfFYY",
             authDomain: "discord-movie-3dabc.firebaseapp.com",
@@ -113,37 +189,11 @@
 
         let isRemoteUpdate = false;
 
-        onValue(ref(db, "room/state"), (snapshot) => {
-            const data = snapshot.val();
-            if (!data) return;
-
-            isRemoteUpdate = true;
-            if (Math.abs(video.currentTime - data.time) > 1.5) {
-                video.currentTime = data.time;
-            }
-
-            if (data.playing && video.paused) {
-                video.play().then(() => { playBtn.style.display = "none"; video.controls = true; }).catch(() => {});
-            } else if (!data.playing && !video.paused) {
-                video.pause();
-            }
-
-            setTimeout(() => { isRemoteUpdate = false; }, 500);
-        });
-
-        video.onplay = () => {
-            playBtn.style.display = "none";
-            video.controls = true;
-            if (isRemoteUpdate) return;
-            set(ref(db, "room/state"), { playing: true, time: video.currentTime });
-        };
-
-        video.onpause = () => {
-            if (isRemoteUpdate, true) {
-                if (isRemoteUpdate) return;
-                set(ref(db, "room/state"), { playing: false, time: video.currentTime });
-            }
-        };
-    </script>
-</body>
-</html>
+        window.initPlayback = function() {
+            video.load();
+            video.play().then(() => {
+                playOverlay.style.opacity = '0';
+                setTimeout(() => playOverlay.style.display = 'none', 300);
+                video.controls = true;
+            }).catch((err) => {
+                errorBox.innerText = "تعذر التش
