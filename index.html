@@ -3,36 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>اختبار الفيديو السريع</title>
+    <title>سينما ديسكورد التفاعلية 🎬</title>
     <style>
-        body {
-            background-color: #111;
-            color: #fff;
+        :root {
+            --bg-color: #0f1015;
+            --text-main: #ffffff;
+            --text-muted: #b9bbbe;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
             margin: 0;
-            font-family: sans-serif;
+            overflow: hidden;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        .header {
             text-align: center;
         }
+        .header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+        .header p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .video-wrapper {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
         video {
-            width: 90%;
-            max-width: 600px;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            margin-top: 20px;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.06);
+            padding: 6px 14px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #3ba55d;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #3ba55d;
         }
     </style>
 </head>
 <body>
 
-    <h2>اختبار التشغيل البسيط 🎬</h2>
-    <p>لو الفيديو ده اشتغل في سفاري، يبقى المشكلة كانت في إعدادات السكربتات القديمة.</p>
+    <div class="app-container">
+        <div class="header">
+            <h1>🎬 سينما ديسكورد</h1>
+            <p>مشاهدة جماعية ومزامنة فورية عبر السحابة</p>
+        </div>
 
-    <!-- مشغل فيديو عادي جداً ومباشر -->
-    <video controls playsinline webkit-playsinline src="https://www.w3schools.com/html/mov_bbb.mp4"></video>
+        <div class="video-wrapper">
+            <!-- الفيديو شغال من سحابة Cloudflare R2 مع أزرار التحكم الأصلية للآيفون -->
+            <video id="moviePlayer" controls playsinline webkit-playsinline preload="auto" src="https://pub-f5cff3f81d2545699fe2aea565870e82.r2.dev/sample-5s.mp4">
+                متصفحك لا يدعم عرض الفيديو.
+            </video>
+        </div>
 
+        <div class="status-badge">
+            <span class="status-dot"></span>
+            <span id="syncStatus">متصل وجاهز للمزامنة</span>
+        </div>
+    </div>
+
+    <script type="module">
+        import { DiscordSDK } from "https://cdn.jsdelivr.net/npm/@discord/embedded-app-sdk@1.0.0/+esm";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+
+        const video = document.getElementById("moviePlayer");
+        const syncStatus = document.getElementById("syncStatus");
+
+        const discordSdk = new DiscordSDK('1563244164106293421');
+        discordSdk.ready().catch(() => {});
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAkpD64rIo7YPMLfHHy_ILjveWh8ZAfFYY",
+            authDomain: "discord-movie-3dabc.firebaseapp.com",
+            projectId: "discord-movie-3dabc",
+            storageBucket: "discord-movie-3dabc.firebasestorage.app",
+            messagingSenderId: "548090739512",
+            appId: "1:548090739512:web:e796bf7ddd946dc57f5fcd",
+            measurementId: "G-YG7EGNY17Z"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let isRemoteUpdate = false;
+
+        // استقبال بيانات المزامنة من Firebase Realtime Database
+        onValue(ref(db, "room/state"), (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            isRemoteUpdate = true;
+            
+            if (Math.abs(video.currentTime - data.time) > 1.5) {
+                video.currentTime = data.time;
+            }
+
+            if (data.playing && video.paused) {
+                video.play().catch(() => {});
+            } else if (!data.playing && !video.paused) {
+                video.pause();
+            }
+
+            setTimeout(() => { isRemoteUpdate = false; }, 400);
+        });
+
+        // إرسال حالة التشغيل لفايربيس
+        video.onplay = () => {
+            syncStatus.innerText = "متصل - يتم التشغيل";
+            if (isRemoteUpdate) return;
+            set(ref(db, "room/state"), { playing: true, time: video.currentTime });
+        };
+
+        // إرسال حالة الإيقاف المؤقت لفايربيس
+        video.onpause = () => {
+            syncStatus.innerText = "متصل - متوقف مؤقتاً";
+            if (isRemoteUpdate) return;
+            set(ref(db, "room/state"), { playing: false, time: video.currentTime });
+        };
+    </script>
 </body>
 </html>
