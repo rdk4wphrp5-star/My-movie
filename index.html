@@ -19,9 +19,6 @@
             align-items: center;
             overflow: hidden;
         }
-        h1 { font-size: 16px; margin-bottom: 5px; }
-        p { color: #aaa; font-size: 11px; margin-bottom: 10px; }
-        
         .video-box {
             width: 95%;
             max-width: 800px;
@@ -36,20 +33,24 @@
             height: 100%;
             object-fit: contain;
         }
+        #error-log {
+            color: #ff5555;
+            font-size: 12px;
+            margin-top: 10px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
 
-    <h1>قاعة الأفلام الخاصة 🍿</h1>
-    <p>مرفوع على سيرفرك الخاص ومتزامن مع الأصدقاء</p>
-
-    <!-- مشغل الفيديو المباشر من Cloudflare R2 -->
     <div class="video-box">
         <video id="moviePlayer" controls playsinline webkit-playsinline preload="auto">
             <source src="https://pub-f5cff3f81d2545699fe2aea565870e82.r2.dev/Movies/sample-5s.mp4" type="video/mp4">
             متصفحك لا يدعم عرض الفيديو.
         </video>
     </div>
+    
+    <div id="error-log"></div>
 
     <!-- ديسكورد SDK وفايربيس للمزامنة -->
     <script type="module">
@@ -57,9 +58,20 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
         import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
+        const video = document.getElementById("moviePlayer");
+        const errorLog = document.getElementById("error-log");
+
+        // تسجيل أي خطأ في تحميل الفيديو
+        video.onerror = function() {
+            const err = video.error;
+            errorLog.innerText = "خطأ في الفيديو (كود: " + (err ? err.code : "غير معروف") + ")";
+        };
+
         // تفعيل ديسكورد SDK
         const discordSdk = new DiscordSDK('1563244164106293421');
-        discordSdk.ready().catch(() => {});
+        discordSdk.ready().catch((e) => {
+            console.log("Discord SDK Error: ", e);
+        });
 
         // إعدادات فايربيس للمزامنة
         const firebaseConfig = {
@@ -74,11 +86,9 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const video = document.getElementById("moviePlayer");
 
         let isRemoteUpdate = false;
 
-        // استقبال التحديثات من الغرفة (المزامنة)
         onValue(ref(db, "room/state"), (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
@@ -97,7 +107,6 @@
             setTimeout(() => { isRemoteUpdate = false; }, 500);
         });
 
-        // إرسال حالتك لفايربيس عند التشغيل أو الإيقاف
         video.onplay = () => {
             if (isRemoteUpdate) return;
             set(ref(db, "room/state"), { playing: true, time: video.currentTime });
