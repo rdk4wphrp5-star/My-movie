@@ -5,49 +5,50 @@
     <title>سينيما ديسكورد الخاصة 🎬</title>
     <style>
         body { background: #111; color: white; text-align: center; font-family: sans-serif; padding: 15px; margin: 0; }
-        h1 { font-size: 20px; margin-bottom: 5px; }
-        p { color: #aaa; font-size: 12px; margin-bottom: 15px; }
+        h1 { font-size: 18px; margin-bottom: 5px; }
+        #status { color: #aaa; font-size: 12px; margin-bottom: 15px; }
         
-        /* حاوية الفيديو لضمان ظهوره بشكل صحيح على الموبايل */
+        /* حاوية الفيديو لتظهر بحجم مظبوط على الموبايل والكمبيوتر */
         #player-container {
             width: 100%;
-            max-width: 600px;
+            max-width: 500px;
             aspect-ratio: 16 / 9;
             margin: 0 auto;
+            background: #000;
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0,0,0,0.7);
         }
-        #player {
+        iframe {
             width: 100%;
             height: 100%;
+            border: none;
         }
     </style>
 </head>
 <body>
     <h1>قاعة الأفلام الخاصة بي 🍿</h1>
-    <p>متزامن مع الجميع في الغرفة!</p>
+    <p id="status">جاري الاتصال بالقاعة...</p>
     
-    <!-- حاوية مشغل الفيديو -->
+    <!-- مشغل يوتيوب المباشر المتوافق مع الموبايل -->
     <div id="player-container">
-        <div id="player"></div>
+        <iframe src="https://www.youtube.com/embed/Aab-jcNrYbU?playsinline=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
     </div>
 
-    <!-- المكتبات -->
-    <script src="https://www.youtube.com/iframe_api"></script>
+    <!-- ديسكورد SDK وفايربيس -->
     <script type="module">
         import { DiscordSDK } from "https://cdn.jsdelivr.net/npm/@discord/embedded-app-sdk@1.0.0/+esm";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+        import { getDatabase, ref } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
         const discordSdk = new DiscordSDK('1563244164106293421');
 
         async function initDiscord() {
             try {
                 await discordSdk.ready();
-                console.log("Discord SDK Ready!");
+                document.getElementById('status').innerText = "متصل بديسكورد وجاهز للمشاهدة!";
             } catch (e) {
-                console.log("Not inside Discord");
+                document.getElementById('status').innerText = "وضع المتصفح العادي";
             }
         }
         initDiscord();
@@ -62,56 +63,7 @@
             measurementId: "G-YG7EGNY17Z"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        let player;
-        let isRemoteUpdate = false;
-
-        window.onYouTubeIframeAPIReady = function() {
-            player = new YT.Player('player', {
-                width: '100%',
-                height: '100%',
-                videoId: 'Aab-jcNrYbU',
-                playerVars: { 'playsinline': 1, 'enablejsapi': 1 },
-                events: {
-                    'onStateChange': onPlayerStateChange
-                }
-            });
-        };
-
-        function onPlayerStateChange(event) {
-            if (isRemoteUpdate) return;
-            try {
-                const currentTime = player.getCurrentTime();
-                if (event.data == YT.PlayerState.PLAYING) {
-                    set(ref(db, "room/state"), { playing: true, time: currentTime });
-                } else if (event.data == YT.PlayerState.PAUSED) {
-                    set(ref(db, "room/state"), { playing: false, time: currentTime });
-                }
-            } catch (e) {}
-        }
-
-        onValue(ref(db, "room/state"), (snapshot) => {
-            const data = snapshot.val();
-            if (!data || !player || typeof player.getPlayerState !== 'function') return;
-
-            isRemoteUpdate = true;
-            try {
-                const currentTime = player.getCurrentTime();
-                if (Math.abs(currentTime - data.time) > 2) {
-                    player.seekTo(data.time, true);
-                }
-
-                if (data.playing && player.getPlayerState() !== YT.PlayerState.PLAYING) {
-                    player.playVideo();
-                } else if (!data.playing && player.getPlayerState() !== YT.PlayerState.PAUSED) {
-                    player.pauseVideo();
-                }
-            } catch (e) {}
-
-            setTimeout(() => { isRemoteUpdate = false; }, 600);
-        });
+        initializeApp(firebaseConfig);
     </script>
 </body>
 </html>
