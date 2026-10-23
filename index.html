@@ -34,7 +34,6 @@
             height: 100%;
             object-fit: contain;
         }
-        /* زر التشغيل المخصص للآيفون والموبايل */
         #customPlayBtn {
             position: absolute;
             top: 50%;
@@ -56,17 +55,17 @@
             font-size: 12px;
             margin-top: 10px;
             text-align: center;
+            max-width: 90%;
         }
     </style>
 </head>
 <body>
 
     <div class="video-box">
-        <!-- زر تشغيل مخصص يظهر فوق الفيديو ليحل مشكلة عدم الاستجابة على الآيفون -->
         <button id="customPlayBtn" onclick="playVideo()">تشغيل الفيلم 🎬</button>
         
-        <video id="moviePlayer" playsinline webkit-playsinline preload="auto">
-            <source src="https://pub-f5cff3f81d2545699fe2aea565870e82.r2.dev/Movies/sample-5s.mp4" type="video/mp4">
+        <!-- تم وضع الرابط مباشرة مع تفعيل crossorigin لتجاوز قيود متصفح ديسكورد على الآيفون -->
+        <video id="moviePlayer" src="https://pub-f5cff3f81d2545699fe2aea565870e82.r2.dev/Movies/sample-5s.mp4" crossorigin="anonymous" playsinline webkit-playsinline preload="auto">
             متصفحك لا يدعم عرض الفيديو.
         </video>
     </div>
@@ -83,11 +82,10 @@
         const playBtn = document.getElementById("customPlayBtn");
         const errorLog = document.getElementById("error-log");
 
-        // دالة التشغيل عند الضغط على الزر المخصص
         window.playVideo = function() {
             video.play().then(() => {
-                playBtn.style.display = "none"; // إخفاء الزر بعد التشغيل
-                video.controls = true; // إظهار أزرار التحكم الطبيعية بعد ما يشتغل
+                playBtn.style.display = "none";
+                video.controls = true;
             }).catch((err) => {
                 errorLog.innerText = "خطأ في التشغيل: " + err.message;
             });
@@ -95,14 +93,21 @@
 
         video.onerror = function() {
             const err = video.error;
-            errorLog.innerText = "خطأ في تحميل الفيديو (كود: " + (err ? err.code : "غير معروف") + ")";
+            let msg = "خطأ غير معروف";
+            if (err) {
+                switch (err.code) {
+                    case 1: msg = "تم إلغاء التحميل"; break;
+                    case 2: msg = "خطأ شبكة (Network Error) - تأكد من إعدادات CORS في R2"; break;
+                    case 3: msg = "خطأ في فك التشفير"; break;
+                    case 4: msg = "الصيغة غير مدعومة أو رابط R2 محظور"; break;
+                }
+            }
+            errorLog.innerText = "كود الخطأ: " + msg;
         };
 
-        // تفعيل ديسكورد SDK
         const discordSdk = new DiscordSDK('1563244164106293421');
         discordSdk.ready().catch(() => {});
 
-        // إعدادات فايربيس للمزامنة
         const firebaseConfig = {
             apiKey: "AIzaSyAkpD64rIo7YPMLfHHy_ILjveWh8ZAfFYY",
             authDomain: "discord-movie-3dabc.firebaseapp.com",
