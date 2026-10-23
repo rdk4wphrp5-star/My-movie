@@ -2,22 +2,38 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>سينيما ديسكورد الخاصة 🎬</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سينيما ديسكورد الاحترافية 🎬</title>
     <style>
-        body { background: #111; color: white; text-align: center; font-family: sans-serif; padding: 15px; margin: 0; }
-        h1 { font-size: 18px; margin-bottom: 5px; }
-        #status { color: #aaa; font-size: 12px; margin-bottom: 15px; }
-        
-        /* حاوية الفيديو لتظهر بحجم مظبوط على الموبايل والكمبيوتر */
-        #player-container {
+        * { box-sizing: border-box; }
+        body, html {
+            margin: 0;
+            padding: 0;
             width: 100%;
-            max-width: 500px;
-            aspect-ratio: 16 / 9;
-            margin: 0 auto;
-            background: #000;
-            border-radius: 10px;
+            height: 100%;
+            background-color: #0d0d0d;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+        }
+        h1 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #f1f1f1;
+        }
+        /* حاوية الفيديو لتملأ شاشة الأكتيفتي باحترافية زي الصورة */
+        #video-container {
+            width: 90%;
+            max-width: 900px;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8);
         }
         iframe {
             width: 100%;
@@ -27,43 +43,32 @@
     </style>
 </head>
 <body>
-    <h1>قاعة الأفلام الخاصة بي 🍿</h1>
-    <p id="status">جاري الاتصال بالقاعة...</p>
-    
-    <!-- مشغل يوتيوب المباشر المتوافق مع الموبايل -->
-    <div id="player-container">
-        <iframe src="https://www.youtube.com/embed/Aab-jcNrYbU?playsinline=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+    <h1>قاعة الأفلام المشتركة 🍿</h1>
+
+    <!-- مشغل الفيديو المتوافق مع ديسكورد -->
+    <div id="video-container">
+        <iframe src="https://www.youtube.com/embed/Aab-jcNrYbU?autoplay=1&enablejsapi=1&playsinline=1" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen>
+        </iframe>
     </div>
 
-    <!-- ديسكورد SDK وفايربيس -->
+    <!-- تفعيل ديسكورد SDK لتظهر الأكتيفتي بشكل نظامي -->
     <script type="module">
         import { DiscordSDK } from "https://cdn.jsdelivr.net/npm/@discord/embedded-app-sdk@1.0.0/+esm";
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-        import { getDatabase, ref } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
         const discordSdk = new DiscordSDK('1563244164106293421');
 
-        async function initDiscord() {
+        async function setup() {
             try {
                 await discordSdk.ready();
-                document.getElementById('status').innerText = "متصل بديسكورد وجاهز للمشاهدة!";
-            } catch (e) {
-                document.getElementById('status').innerText = "وضع المتصفح العادي";
+                console.log("Discord SDK Initialized successfully!");
+            } catch (error) {
+                console.error("SDK initialization error:", error);
             }
         }
-        initDiscord();
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyAkpD64rIo7YPMLfHHy_ILjveWh8ZAfFYY",
-            authDomain: "discord-movie-3dabc.firebaseapp.com",
-            projectId: "discord-movie-3dabc",
-            storageBucket: "discord-movie-3dabc.firebasestorage.app",
-            messagingSenderId: "548090739512",
-            appId: "1:548090739512:web:e796bf7ddd946dc57f5fcd",
-            measurementId: "G-YG7EGNY17Z"
-        };
-
-        initializeApp(firebaseConfig);
+        setup();
     </script>
 </body>
 </html>
